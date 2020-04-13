@@ -13,14 +13,22 @@ if [[ "$CORE_VERSION" == *"release/"* ]] ; then
     CHECKOUT_BRANCHES=true
 fi
 
-apt-get update
-apt-get install --no-install-recommends -y curl procps ca-certificates
+if [[ "$TAG" == 'alpine' ]] ; then
+    apk update
+    apk add --no-cache curl procps ca-certificates
+else
+    apt-get update
+    apt-get install --no-install-recommends -y curl procps ca-certificates
+fi
+
 curl -L -s $S6OVERLAY_RELEASE | tar xvzf - -C /
 mv /init /s6-init
 
-# debconf-apt-progress seems to hang so get rid of it too
-which debconf-apt-progress
-mv "$(which debconf-apt-progress)" /bin/no_debconf-apt-progress
+if [[ "$TAG" == 'debian' ]] ; then
+  # debconf-apt-progress seems to hang so get rid of it too
+  which debconf-apt-progress
+  mv "$(which debconf-apt-progress)" /bin/no_debconf-apt-progress
+fi
 
 # Get the install functions
 curl https://raw.githubusercontent.com/pi-hole/pi-hole/${CORE_VERSION}/automated%20install/basic-install.sh > "$PIHOLE_INSTALL"
@@ -43,16 +51,20 @@ source $setupVars
 export USER=pihole
 distro_check
 
-# fix permission denied to resolvconf post-inst /etc/resolv.conf moby/moby issue #1297
-apt-get -y install debconf-utils
-echo resolvconf resolvconf/linkify-resolvconf boolean false | debconf-set-selections
+if [[ "$TAG" == 'debian' ]] ; then
+    # fix permission denied to resolvconf post-inst /etc/resolv.conf moby/moby issue #1297
+    apt-get -y install debconf-utils
+    echo resolvconf resolvconf/linkify-resolvconf boolean false | debconf-set-selections
+fi
 
 ln -s /bin/true /usr/local/bin/service
 bash -ex "./${PIHOLE_INSTALL}" --unattended
 rm /usr/local/bin/service
 
-# IPv6 support for nc openbsd better than traditional
-apt-get install -y --force-yes netcat-openbsd
+if [[ "$TAG" == 'debian' ]] ; then
+    # IPv6 support for nc openbsd better than traditional
+    apt-get install -y --force-yes netcat-openbsd
+fi
 
 fetch_release_metadata() {
     local directory="$1"

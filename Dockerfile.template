@@ -1,5 +1,6 @@
 FROM {{ pihole.base }}
 
+ENV TAG {{ pihole.os }}
 ENV ARCH {{ pihole.arch }}
 ENV S6OVERLAY_RELEASE https://github.com/just-containers/s6-overlay/releases/download/{{ pihole.s6_version }}/s6-overlay-{{ pihole.s6arch }}.tar.gz
 
@@ -7,8 +8,15 @@ COPY install.sh /usr/local/bin/install.sh
 COPY VERSION /etc/docker-pi-hole-version
 ENV PIHOLE_INSTALL /root/ph_install.sh
 
-RUN bash -ex install.sh 2>&1 && \
-    rm -rf /var/cache/apt/archives /var/lib/apt/lists/*
+{% if pihole.os == 'alpine' %}
+RUN apk update && apk add --no-cache bash
+{% endif %}
+
+RUN bash -ex install.sh 2>&1
+
+{% if pihole.os == 'debian' %}
+RUN rm -rf /var/cache/apt/archives /var/lib/apt/lists/*
+{% endif %}
 
 ENTRYPOINT [ "/s6-init" ]
 

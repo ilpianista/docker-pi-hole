@@ -74,17 +74,17 @@ images = {
     ],
     'alpine': [
         {
-            'base': 'alpine:edge',
+            'base': 'alpine:3.10',
             'arch': 'amd64',
             's6arch': 'amd64',
         },
         {
-            'base': 'multiarch/alpine:armhf-edge',
+            'base': 'multiarch/alpine:armhf-v3.10',
             'arch': 'arm',
             's6arch' : 'arm',
         },
         {
-            'base': 'multiarch/alpine:arm64-edge',
+            'base': 'multiarch/alpine:arm64-v3.10',
             'arch': 'arm64',
             's6arch' : 'aarch64',
         }
