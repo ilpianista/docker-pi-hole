@@ -2,12 +2,13 @@
 """ Dockerfile.py - generates and build dockerfiles
 
 Usage:
-  Dockerfile.py [--hub_tag=<tag>] [--arch=<arch> ...] [-v] [-t] [--no-build | --no-generate] [--no-cache]
+  Dockerfile.py [--os=<os> ...] [--hub_tag=<tag>] [--arch=<arch> ...] [-v] [-t] [--no-build | --no-generate] [--no-cache]
 
 Options:
     --no-build      Skip building the docker images
     --no-cache      Build without using any cache data
     --no-generate   Skip generating Dockerfiles from template
+    --os=<os>       What OS(s) to build             [default: alpine debian]
     --hub_tag=<tag> What the Docker Hub Image should be tagged as [default: None]
     --arch=<arch>   What Architecture(s) to build   [default: amd64 armel armhf arm64]
     -v              Print docker's command output   [default: False]
@@ -32,8 +33,14 @@ base_vars = {
 }
 
 os_base_vars = {
-    'php_env_config': '/etc/lighttpd/conf-enabled/15-fastcgi-php.conf',
-    'php_error_log': '/var/log/lighttpd/error.log'
+    'debian': {
+        'php_env_config': '/etc/lighttpd/conf-enabled/15-fastcgi-php.conf',
+        'php_error_log': '/var/log/lighttpd/error.log'
+    },
+    'alpine': {
+        'php_env_config': '/etc/php5/fpm.d/envs.conf',
+        'php_error_log': '/var/log/nginx/error.log'
+    }
 }
 
 __version__ = None
@@ -43,7 +50,7 @@ with open('{}/VERSION'.format(dot), 'r') as v:
     __version__ = raw_version.replace('release/', 'release-')
 
 images = {
-    __version__: [
+    'debian': [
         {
             'base': 'pihole/debian-base:latest',
             'arch': 'amd64',
@@ -64,6 +71,23 @@ images = {
             'arch': 'arm64',
             's6arch' : 'aarch64',
         }
+    ],
+    'alpine': [
+        {
+            'base': 'alpine:edge',
+            'arch': 'amd64',
+            's6arch': 'amd64',
+        },
+        {
+            'base': 'multiarch/alpine:armhf-edge',
+            'arch': 'arm',
+            's6arch' : 'arm',
+        },
+        {
+            'base': 'multiarch/alpine:arm64-edge',
+            'arch': 'arm64',
+            's6arch' : 'aarch64',
+        }
     ]
 }
 
@@ -72,15 +96,18 @@ def generate_dockerfiles(args):
         print(" ::: Skipping Dockerfile generation")
         return
 
-    for version, archs in images.items():
+    for os, archs in images.items():
         for image in archs:
+            if os not in args['--os']:
+                continue
             if image['arch'] not in args['--arch']:
                 continue
             s6arch = image['s6arch'] if image['s6arch'] else image['arch']
             merged_data = dict(
-                list({ 'version': version }.items()) +
+                list({ 'version': __version__ }.items()) +
+                list({ 'os': os }.items()) +
                 list(base_vars.items()) +
-                list(os_base_vars.items()) +
+                list(os_base_vars[os].items()) +
                 list(image.items()) +
                 list({ 's6arch': s6arch }.items())
             )
@@ -98,8 +125,9 @@ def build_dockerfiles(args):
         print(" ::: Skipping Dockerfile building")
         return
 
-    for arch in args['--arch']:
-        build('pihole', arch, args)
+    for os in args['--os']:
+        for arch in args['--arch']:
+            build('pihole', os, arch, args)
 
 
 def run_and_stream_command_output(command, args):
@@ -116,9 +144,9 @@ def run_and_stream_command_output(command, args):
         print(build_result.stderr)
 
 
-def build(docker_repo, arch, args):
+def build(docker_repo, os, arch, args):
     dockerfile = 'Dockerfile_{}'.format(arch)
-    repo_tag = '{}:{}_{}'.format(docker_repo, __version__, arch)
+    repo_tag = '{}:{}_{}_{}'.format(docker_repo, __version__, os, arch)
     cached_image = '{}/{}'.format('pihole', repo_tag)
     print(" ::: Building {}".format(repo_tag))
     time=''
