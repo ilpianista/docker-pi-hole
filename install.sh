@@ -31,7 +31,7 @@ if [[ "$TAG" == 'debian' ]] ; then
 fi
 
 # Get the install functions
-curl https://raw.githubusercontent.com/pi-hole/pi-hole/${CORE_VERSION}/automated%20install/basic-install.sh > "$PIHOLE_INSTALL"
+curl https://raw.githubusercontent.com/ilpianista/pi-hole/alpine/automated%20install/basic-install.sh > "$PIHOLE_INSTALL"
 PH_TEST=true . "${PIHOLE_INSTALL}"
 
 # Preseed variables to assist with using --unattended install
