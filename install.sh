@@ -57,7 +57,8 @@ if [[ "$TAG" == 'debian' ]] ; then
     echo resolvconf resolvconf/linkify-resolvconf boolean false | debconf-set-selections
 fi
 
-ln -s /bin/true /usr/local/bin/service
+echo -e "#!/bin/sh\n/bin/true" > /usr/local/bin/service
+chmod +x /usr/local/bin/service
 bash -ex "./${PIHOLE_INSTALL}" --unattended
 rm /usr/local/bin/service
 
