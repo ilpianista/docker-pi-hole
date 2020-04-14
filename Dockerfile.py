@@ -140,7 +140,7 @@ def run_and_stream_command_output(command, args):
                 print(line, end='')
     build_result.wait()
     if build_result.returncode != 0:
-        print("     ::: Error running".format(command))
+        print("     ::: Error running {}".format(command))
         print(build_result.stderr)
 
 
